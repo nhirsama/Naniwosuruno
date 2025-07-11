@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>何をしているの</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for loading animation */
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 4px solid #3b82f6;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+    <!-- Theme title -->
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">何をしているの</h1>
+    <p class="text-sm text-gray-500 mb-6">现在在做什么？</p>
+    <!-- Window title display -->
+    <p class="text-lg text-gray-600">
+        当前窗口：
+        <span id="windowTitle" class="font-semibold text-blue-600 loading">加载中...</span>
+    </p>
+</div>
+
+<script>
+    // Connect to SSE endpoint
+    const source = new EventSource('/events?stream=focus');
+
+    // Element to display window title
+    const titleElement = document.getElementById('windowTitle');
+
+    // Handle incoming SSE messages
+    source.onmessage = function(event) {
+        titleElement.textContent = event.data;
+        titleElement.classList.remove('loading'); // Remove loading animation
+    };
+
+    // Handle SSE errors (e.g., server disconnect)
+    source.onerror = function() {
+        titleElement.textContent = '连接错误';
+        titleElement.classList.add('loading');
+    };
+</script>
+</body>
+</html>
