@@ -1,4 +1,4 @@
-module Naniwosuruno
+module github.com/nhirsama/Naniwosuruno
 
 go 1.24
 
