@@ -51,7 +51,11 @@ func request(title string) bool {
 		log.Println("发送到服务端失败:", err)
 		return false
 	} else {
-		resp.Body.Close()
+		err := resp.Body.Close()
+		if err != nil {
+			log.Println(err)
+			return false
+		}
 	}
 	return true
 }

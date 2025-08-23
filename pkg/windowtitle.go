@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"os/exec"
 	"strings"
 	"unicode/utf8"
 )
@@ -54,14 +53,4 @@ func CleanWindowTitle(raw string) string {
 		return raw
 	}
 	return "Unknown"
-}
-
-// 获取当前活动窗口的应用名（调用 kdotool）
-func GetActiveAppName(kdotoolPath string) (string, error) {
-	out, err := exec.Command(kdotoolPath, "getactivewindowname").Output()
-	if err != nil {
-		return "", err
-	}
-	title := strings.TrimSpace(string(out))
-	return CleanWindowTitle(title), nil
 }
