@@ -16,7 +16,7 @@ import (
 var (
 	token   string
 	client  *http.Client
-	bashURL string = "http://localhost:9975"
+	bashURL = "http://localhost:9975"
 )
 
 func init() {
