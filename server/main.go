@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/nhirsama/Naniwosuruno/server/pkg"
-	"github.com/r3labs/sse/v2"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/nhirsama/Naniwosuruno/pkg"
+	"github.com/r3labs/sse/v2"
 )
 
 var token string
