@@ -17,7 +17,7 @@ func NewWindowTitle() inter.GetWindowTitle {
 	return &WindowTitle{}
 }
 func (w *WindowTitle) getRawWindowTitle() (string, error) {
-	cmd := exec.Command("./kdotool", "getactivewindow", "getwindowname")
+	cmd := exec.Command("./kdotool", "getactivewindow", "getwindowclassname")
 	out, err := cmd.Output()
 	if err != nil {
 		var exitError *exec.ExitError
@@ -34,5 +34,5 @@ func (w *WindowTitle) GetWindowTitle() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return pkg.CleanWindowTitle(windowRawTitle), nil
+	return pkg.FormatAppClass(windowRawTitle), nil
 }
