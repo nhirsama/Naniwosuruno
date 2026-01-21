@@ -92,7 +92,11 @@ func (c *Client) Start() {
 		log.Fatalf("%s not yet supported", c.os)
 	}
 
-	log.Printf("Client started on %s (%s)", c.os, c.desktop)
+	if c.os == Windows {
+		log.Printf("Client started on %s", c.os)
+	} else {
+		log.Printf("Client started on %s (%s)", c.os, c.desktop)
+	}
 
 	for {
 		windowTitle, err := c.handle.GetWindowTitle()
