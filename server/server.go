@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -10,14 +10,20 @@ import (
 	"github.com/r3labs/sse/v2"
 )
 
-var token string
-
-func init() {
-	token = pkg.ReadToken()
-	//fmt.Println(token)
+type Server struct {
+	token string
 }
 
-func main() {
+func Run() {
+	server := NewServer()
+	server.Run()
+}
+func NewServer() *Server {
+	return &Server{
+		token: pkg.ReadConfig().Token,
+	}
+}
+func (s *Server) Run() {
 	sseServer := sse.New()
 
 	// 把每个 Stream 的队列长度从 1024 缩到 64
@@ -29,7 +35,6 @@ func main() {
 			http.Error(w, "方法不允许，请使用 POST", http.StatusMethodNotAllowed)
 			return
 		}
-		//fmt.Println("请求头：", r.Header)
 
 		// 检查 Cookie
 		cookie, err := r.Cookie("token")
@@ -37,7 +42,7 @@ func main() {
 			http.Error(w, "未授权：无效的cookie", http.StatusUnauthorized)
 			fmt.Println(err)
 			return
-		} else if cookie.Value != token {
+		} else if cookie.Value != s.token {
 			http.Error(w, "未授权：无效的token", http.StatusUnauthorized)
 			return
 		}
@@ -58,11 +63,19 @@ func main() {
 		}
 
 		// 发布到 SSE 流
-		ok := sseServer.TryPublish("focus", &sse.Event{Data: body})
-		if !ok {
-			log.Printf("队列已满，丢弃一次更新: %s\n", string(body))
+		var payload string
+		osType := r.URL.Query().Get("os")
+		if osType != "" {
+			payload = fmt.Sprintf(`{"title": "%s", "os": "%s"}`, string(body), osType)
+		} else {
+			payload = string(body)
 		}
-		_, err = fmt.Fprintf(w, "收到标题: %s", string(body))
+
+		ok := sseServer.TryPublish("focus", &sse.Event{Data: []byte(payload)})
+		if !ok {
+			log.Printf("队列已满，丢弃一次更新: %s\n", payload)
+		}
+		_, err = fmt.Fprintf(w, "收到更新: %s", payload)
 		if err != nil {
 			return
 		}

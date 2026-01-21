@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -45,46 +45,59 @@ type Client struct {
 	lastWindowTitle string
 }
 
-var client Client
-
-func init() {
-	client.os = OSType(runtime.GOOS)
-	client.desktop = DesktopType(os.Getenv("XDG_CURRENT_DESKTOP"))
-	if client.desktop == "" {
-		client.desktop = DesktopType(os.Getenv("DESKTOP_SESSION"))
+// NewClient 初始化客户端
+func NewClient() *Client {
+	c := &Client{}
+	c.os = OSType(runtime.GOOS)
+	c.desktop = DesktopType(os.Getenv("XDG_CURRENT_DESKTOP"))
+	if c.desktop == "" {
+		c.desktop = DesktopType(os.Getenv("DESKTOP_SESSION"))
 	}
-	switch client.os {
+
+	// 配置读取
+	// 注意：如果配置文件损坏，这里可能会由 pkg.ReadConfig() 导致 fatal error
+	c.token = pkg.ReadConfig().Token
+	c.http = &http.Client{}
+	c.bashURL = pkg.ReadConfig().BaseUrl
+	if c.bashURL == "" {
+		c.bashURL = "http://localhost:9975"
+	}
+	return c
+}
+
+// Run 启动客户端主循环
+func Run() {
+	c := NewClient()
+	c.Start()
+}
+
+func (c *Client) Start() {
+	// 检查系统支持
+	switch c.os {
 	case Windows:
-		panic("Windows not yet supported")
+		log.Fatal("Windows not yet supported")
 	case Linux:
-		switch client.desktop {
+		switch c.desktop {
 		case KDE:
-			client.handle = LinuxKDE.NewWindowTitle()
+			c.handle = LinuxKDE.NewWindowTitle()
 		default:
-			panic(fmt.Sprintf("Linux %s desktop not yet supported", client.os))
+			log.Fatalf("Linux %s desktop not yet supported", c.desktop)
 		}
 	case MocOS:
-		panic("MocOS not yet supported")
+		log.Fatal("MocOS not yet supported")
 	case Android:
-		panic("Android not yet supported")
+		log.Fatal("Android not yet supported")
 	default:
-		panic(fmt.Sprintf("%s not yet supported", client.os))
+		log.Fatalf("%s not yet supported", c.os)
 	}
 
-	client.token = pkg.ReadToken()
-	client.http = &http.Client{}
-	client.bashURL = "http://localhost:9975"
-}
+	log.Printf("Client started on %s (%s)", c.os, c.desktop)
 
-func main() {
-	client.Run()
-}
-
-func (c *Client) Run() {
 	for {
 		windowTitle, err := c.handle.GetWindowTitle()
 		if err != nil {
 			log.Printf("GetWindowTitle failed: %v", err)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -119,12 +132,11 @@ func (c *Client) request(title string) bool {
 	if err != nil {
 		log.Println("发送到服务端失败:", err)
 		return false
-	} else {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-			return false
-		}
+	}
+	err = resp.Body.Close()
+	if err != nil {
+		log.Println(err)
+		return false
 	}
 	return true
 }
