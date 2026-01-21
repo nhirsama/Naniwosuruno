@@ -4,55 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>何をしているの</title>
-    <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for loading animation */
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 1.5rem;
-            height: 1.5rem;
-            border: 4px solid #3b82f6;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 0.5rem;
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        /* 状态呼吸灯 */
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.connected {
+            background-color: #10b981; /* Green */
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+        .status-dot.disconnected {
+            background-color: #ef4444; /* Red */
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* 文字切换动画 */
+        .fade-text {
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .fade-text.hidden {
+            opacity: 0;
+            transform: translateY(10px);
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-<div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-    <!-- Theme title -->
-    <h1 class="text-3xl font-bold text-gray-800 mb-2">何をしているの</h1>
-    <p class="text-sm text-gray-500 mb-6">现在在做什么？</p>
-    <!-- Window title display -->
-    <p class="text-lg text-gray-600">
-        当前窗口：
-        <span id="windowTitle" class="font-semibold text-blue-600 loading">加载中...</span>
-    </p>
-</div>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="glass-card rounded-2xl p-10 max-w-lg w-full text-center relative overflow-hidden">
+        
+        <!-- 装饰背景圆 -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+
+        <!-- 顶部状态栏 -->
+        <div class="absolute top-4 right-4 flex items-center space-x-2">
+            <span id="statusText" class="text-xs text-gray-400 font-medium transition-colors duration-300">Connecting...</span>
+            <span id="statusDot" class="status-dot disconnected"></span>
+        </div>
+
+        <div class="relative z-10">
+            <!-- 小标题 -->
+            <h2 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1 text-center">Current Focus</h2>
+            <h1 class="text-gray-400 text-sm mb-8 font-light tracking-wide text-center">今、何をしているの？</h1>
+
+            <!-- 主内容区域：增加了高度以防止被遮挡 -->
+            <div class="min-h-[5.5rem] flex items-center justify-center">
+                <p id="windowTitle" class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 fade-text leading-tight py-2">
+                    Waiting...
+                </p>
+            </div>
+            
+            <!-- 底部装饰线 -->
+            <div class="mt-8 mx-auto w-16 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-50"></div>
+        </div>
+    </div>
 
 <script>
-    // Connect to SSE endpoint
+    const titleElement = document.getElementById('windowTitle');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    let currentTitle = "";
+    let currentOS = "";
+    let isConnected = false;
+
+    function updateStatusUI() {
+        if (isConnected) {
+            statusDot.classList.remove('disconnected');
+            statusDot.classList.add('connected');
+            statusText.classList.replace('text-gray-400', 'text-green-600');
+            
+            const osDisplay = currentOS ? (currentOS.charAt(0).toUpperCase() + currentOS.slice(1) + " ") : "";
+            statusText.textContent = osDisplay + "Live";
+        } else {
+            statusDot.classList.remove('connected');
+            statusDot.classList.add('disconnected');
+            statusText.textContent = "Offline";
+            statusText.classList.replace('text-green-600', 'text-gray-400');
+        }
+    }
+
+    function updateContent(title, os) {
+        if (os) {
+            currentOS = os;
+            updateStatusUI();
+        }
+
+        if (currentTitle === title) return;
+        
+        titleElement.classList.add('hidden');
+        
+        setTimeout(() => {
+            if (!title || title.trim() === "") {
+                title = "Idle";
+            }
+            titleElement.textContent = title;
+            currentTitle = title;
+            titleElement.classList.remove('hidden');
+        }, 300);
+    }
+
     const source = new EventSource('/events?stream=focus');
 
-    // Element to display window title
-    const titleElement = document.getElementById('windowTitle');
-
-    // Handle incoming SSE messages
-    source.onmessage = function(event) {
-        titleElement.textContent = event.data;
-        titleElement.classList.remove('loading'); // Remove loading animation
+    source.onopen = function() {
+        isConnected = true;
+        updateStatusUI();
     };
 
-    // Handle SSE errors (e.g., server disconnect)
-    source.onerror = function() {
-        titleElement.textContent = '连接错误';
-        titleElement.classList.add('loading');
+    source.onmessage = function(event) {
+        let data = event.data;
+        let title = data;
+        let os = null;
+
+        try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed === 'object') {
+                title = parsed.title;
+                os = parsed.os;
+            }
+        } catch (e) {
+            title = data;
+        }
+
+        updateContent(title, os);
+    };
+
+    source.onerror = function(err) {
+        isConnected = false;
+        updateStatusUI();
     };
 </script>
 </body>

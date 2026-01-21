@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,11 @@ import (
 	"github.com/nhirsama/Naniwosuruno/client/inter"
 	"github.com/nhirsama/Naniwosuruno/pkg"
 )
+
+type UpdatePayload struct {
+	Title string `json:"title"`
+	OS    OSType `json:"os"`
+}
 
 type OSType string
 
@@ -92,11 +98,22 @@ func (c *Client) Run() {
 }
 
 func (c *Client) request(title string) bool {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/update", c.bashURL), bytes.NewBuffer([]byte(title)))
+	payload := UpdatePayload{
+		Title: title,
+		OS:    c.os,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Println("序列化 JSON 失败:", err)
+		return false
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/update", c.bashURL), bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("创建请求失败:", err)
 		return false
 	}
+	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "token", Value: c.token})
 	resp, err := c.http.Do(req)
 	if err != nil {
