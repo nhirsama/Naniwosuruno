@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/nhirsama/Naniwosuruno/client/LinuxKDE"
+	clientWindows "github.com/nhirsama/Naniwosuruno/client/Windows"
 	"github.com/nhirsama/Naniwosuruno/client/inter"
 	"github.com/nhirsama/Naniwosuruno/pkg"
 )
@@ -75,7 +76,7 @@ func (c *Client) Start() {
 	// 检查系统支持
 	switch c.os {
 	case Windows:
-		log.Fatal("Windows not yet supported")
+		c.handle = clientWindows.NewWindowTitle()
 	case Linux:
 		switch c.desktop {
 		case KDE:

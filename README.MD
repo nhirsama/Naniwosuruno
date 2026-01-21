@@ -16,7 +16,7 @@ chmod u+x n10o
 ### 客户端 
 #### Linux 系统 KDE 桌面
 目前只适配了 Linux 系统的 KDE 桌面，理论上兼容 x11 和 wayland。  
-首先需要编译项目所依赖的 [./client/LinuxKDE/kdotool](https://github.com/jinliu/kdotool/tree/1ad61acb56c0707df53a4d9ce10153a87f08523b)
+首先需要编译项目所依赖的 [./client/LinuxKDE/kdotool](https://github.com/jinliu/kdotool)
 项目，将其编译生成的可执行文件放置于根目录，并命名为 `kdotool`。  
 在项目根目录中运行
 ```bash
