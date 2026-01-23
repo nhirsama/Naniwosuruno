@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/nhirsama/Naniwosuruno/pkg"
 	"github.com/r3labs/sse/v2"
@@ -25,9 +26,9 @@ func NewServer() *Server {
 }
 func (s *Server) Run() {
 	sseServer := sse.New()
-
-	// 把每个 Stream 的队列长度从 1024 缩到 64
-	sseServer.BufferSize = 64
+	// 设置消息有效期为一天
+	sseServer.EventTTL = 24 * time.Hour
+	sseServer.BufferSize = 4
 
 	sseServer.CreateStream("focus") // 创建 "focus" 流
 	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,27 @@ func (s *Server) Run() {
 	})
 
 	// 处理 SSE 连接
-	http.HandleFunc("/events", sseServer.ServeHTTP)
+	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
+		// 添加 CORS 头
+		// 允许你的前端地址访问
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// SSE 必要的头
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		// 如果是预检请求 (OPTIONS)，直接返回 OK
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// 调用 sseServer 的处理逻辑
+		sseServer.ServeHTTP(w, r)
+	})
 
 	// 提供 Web 页面
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
