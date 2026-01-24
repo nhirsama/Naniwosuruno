@@ -1,0 +1,33 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cli/ ./cli/
+COPY pkg/ ./pkg/
+COPY server/ ./server/
+COPY client/ ./client/
+COPY main.go ./
+
+ENV CGO_ENABLED=0
+RUN go build -o naniwosuruno main.go
+
+
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/naniwosuruno .
+
+COPY index.html .
+
+RUN mkdir -p data
+
+EXPOSE 9975
+
+VOLUME ["/app/data"]
+
+CMD ["./naniwosuruno", "server"]

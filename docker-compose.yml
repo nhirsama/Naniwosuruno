@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    image: naniwosurono:latest
+    ports:
+      - "9975:9975"
+    volumes:
+      - ./data:/app/data
