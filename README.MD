@@ -14,15 +14,42 @@ chmod u+x n10o
 第一次选择任意启动选项将会初始化 token。若客户端和服务端在不同环境运行，则需要修改任意一端中的`./data/config.json`使`token`字段保持相同，并在客户端的配置文件中将 `BaseUrl` 字段填写为服务器域名，如 `http://localhost:9975`。 
 
 ### 客户端 
-#### Linux 系统 KDE 桌面
-目前只适配了 Linux 系统的 KDE 桌面，理论上兼容 x11 和 wayland。  
+#### 操作系统/桌面环境 支持状态
+| 操作系统    | 具体发行版 / 桌面环境    | 支持状态 |
+|---------|-----------------|------|
+| Windows | Windows 11      | [x]  |
+| macOS   |                 | [ ]  |
+| Linux   | GNOME (Wayland) | [ ]  |
+|         | KDE Plasma 6    | [x]  |            
+| 移动      | Android         | [ ]  |
+
+#### Windows11 
+直接编译运行即可
+```bash
+go build -o n10o.exe main.go
+./n100.exe
+```
+#### Linux(KDE)
+适配了 Linux 系统的 KDE 桌面，理论上兼容 x11 和 wayland。  
 首先需要编译项目所依赖的 [./client/LinuxKDE/kdotool](https://github.com/jinliu/kdotool)
 项目，将其编译生成的可执行文件放置于根目录，并命名为 `kdotool`。  
 在项目根目录中运行
 ```bash
-go build -o n10oClient ./client/LinuxKDE/main.go
-chmod u+x n10oClient
-./n10on10oClient
+go build -o n10o main.go
+chmod u+x n10o
+./n10o
 ```
-### web
+### 服务端
+若客户端和服务端在同一设备上，直接运行
+```bash
+./n10o start
+```
+即可。
+
+若在 Linux 服务器上运行，可以使用 `docker` 部署项目
+```bash
+git clone https://github.com/nhirsama/Naniwosuruno.git
+cd Naniwosuruno
+docker compose up -d --build
+```
 运行服务端之后将会在 [http://localhost:9975](http://localhost:9975)启动服务。
