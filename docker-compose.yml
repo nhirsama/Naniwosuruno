@@ -1,6 +1,12 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - HTTP_PROXY=${HTTP_PROXY:-}
+        - HTTPS_PROXY=${HTTPS_PROXY:-}
+        - ALL_PROXY=${ALL_PROXY:-}
+
     image: naniwosurono:latest
     ports:
       - "9975:9975"
