@@ -137,7 +137,7 @@
         }, 300);
     }
 
-    const source = new EventSource('/events?stream=focus');
+    const source = new EventSource('/api/v1/events?stream=focus');
 
     source.onopen = function() {
         isConnected = true;
