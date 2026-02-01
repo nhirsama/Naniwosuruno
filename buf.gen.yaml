@@ -1,0 +1,18 @@
+# buf.gen.yaml 定义了代码生成规则
+version: v2
+plugins:
+  # 生成 Go 基础结构体
+  - local: protoc-gen-go
+    out: gen
+    opt: paths=source_relative
+
+  # 生成 ConnectRPC Go 接口
+  - local: protoc-gen-connect-go
+    out: gen
+    opt: paths=source_relative
+
+  # 如果以后需要前端代码，只需取消下面的注释并安装插件：
+  # - local: protoc-gen-es
+  #   out: gen/frontend
+  # - local: protoc-gen-connect-es
+  #   out: gen/frontend

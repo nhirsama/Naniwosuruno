@@ -1,0 +1,3 @@
+# buf.yaml 将该目录定义为一个 Buf 模块
+version: v2
+name: buf.build/nhirsama/naniwosuruno

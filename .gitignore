@@ -1,2 +1,6 @@
+*
+!*/
+!*.*
 /data/
 /.idea/
+#/internal/client/LinuxKDE/kdotool

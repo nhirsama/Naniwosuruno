@@ -1,3 +1,3 @@
-[submodule "client/LinuxKDE/kdotool"]
-	path = client/LinuxKDE/kdotool
+[submodule "internal/client/LinuxKDE/kdotool"]
+	path = internal/client/LinuxKDE/kdotool
 	url = https://github.com/jinliu/kdotool.git

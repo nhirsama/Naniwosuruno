@@ -128,7 +128,7 @@ func (s *statefulAuthenticatorImpl) ValidateChallengeAndIssueToken(clientID, sig
 	}
 
 	token := uuid.New().String()
-	expiresIn := int64(3600) // Session 有效期设定为 1 小时
+	expiresIn := int64(60 * 60 * 24) // Session 有效期设定为 1 天
 
 	clientName := s.resolveClientName(clientID)
 

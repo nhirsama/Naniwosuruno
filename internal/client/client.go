@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nhirsama/Naniwosuruno/client/LinuxKDE"
-	clientWindows "github.com/nhirsama/Naniwosuruno/client/Windows"
-	"github.com/nhirsama/Naniwosuruno/client/inter"
+	"github.com/nhirsama/Naniwosuruno/internal/client/LinuxKDE"
+	clientWindows "github.com/nhirsama/Naniwosuruno/internal/client/Windows"
+	"github.com/nhirsama/Naniwosuruno/internal/client/inter"
 	"github.com/nhirsama/Naniwosuruno/pkg"
 )
 

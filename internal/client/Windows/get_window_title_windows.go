@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/nhirsama/Naniwosuruno/client/inter"
+	"github.com/nhirsama/Naniwosuruno/internal/client/inter"
 )
 
 var (

@@ -5,7 +5,7 @@ package Windows
 import (
 	"errors"
 
-	"github.com/nhirsama/Naniwosuruno/client/inter"
+	"github.com/nhirsama/Naniwosuruno/internal/client/inter"
 )
 
 type WindowTitle struct {

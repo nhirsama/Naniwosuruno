@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/nhirsama/Naniwosuruno/client"
+	"github.com/nhirsama/Naniwosuruno/internal/client"
 	"github.com/spf13/cobra"
 )
 

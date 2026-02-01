@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package naniwosuruno.v1;
+
+option go_package = "github.com/nhirsama/Naniwosuruno/gen/naniwosuruno/v1;naniwosurunov1";
+
+// 认证服务
+service AuthService {
+  // 获取挑战 Nonce (Step 1)
+  rpc CreateChallenge(CreateChallengeRequest) returns (CreateChallengeResponse);
+  // 验证签名并换取 Token (Step 2)
+  rpc VerifyChallenge(VerifyChallengeRequest) returns (VerifyChallengeResponse);
+}
+
+// 窗口服务
+service WindowService {
+  // 客户端上报当前窗口状态
+  rpc ReportWindow(ReportWindowRequest) returns (ReportWindowResponse);
+  // 前端订阅实时窗口事件流
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream WindowEvent);
+}
+
+// --- Auth Messages ---
+
+message CreateChallengeRequest {
+  string client_id = 1;
+}
+
+message CreateChallengeResponse {
+  string challenge = 1;
+}
+
+message VerifyChallengeRequest {
+  string client_id = 1;
+  string signature = 2; // Base64 encoded signature
+}
+
+message VerifyChallengeResponse {
+  string token = 1;
+  int64 expires_in = 2;
+}
+
+// --- Window Messages ---
+
+message ReportWindowRequest {
+  string title = 1;
+  string os = 2;
+}
+
+message ReportWindowResponse {
+  // 空响应通常可以留空，或者返回简单的确认
+}
+
+message SubscribeEventsRequest {
+  string stream_id = 1; // e.g. "focus"
+}
+
+message WindowEvent {
+  string title = 1;
+  string os = 2;
+  string client = 3;
+}

@@ -10,10 +10,10 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY cli/ ./cli/
+COPY internal/cli/ ./cli/
 COPY pkg/ ./pkg/
-COPY server/ ./server/
-COPY client/ ./client/
+COPY internal/server/ ./server/
+COPY internal/client/ ./client/
 COPY main.go ./
 
 ENV CGO_ENABLED=0
