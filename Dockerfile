@@ -10,11 +10,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY internal/cli/ ./cli/
-COPY pkg/ ./pkg/
-COPY internal/server/ ./server/
-COPY internal/client/ ./client/
-COPY main.go ./
+COPY . .
 
 ENV CGO_ENABLED=0
 RUN go build -o naniwosuruno cmd/naniwosuruno/main.go
