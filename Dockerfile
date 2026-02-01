@@ -17,7 +17,7 @@ COPY internal/client/ ./client/
 COPY main.go ./
 
 ENV CGO_ENABLED=0
-RUN go build -o naniwosuruno main.go
+RUN go build -o naniwosuruno cmd/naniwosuruno/main.go
 
 
 FROM alpine:latest
