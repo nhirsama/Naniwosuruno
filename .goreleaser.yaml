@@ -1,0 +1,47 @@
+version: 2
+
+project_name: naniwosuruno
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+    binary: naniwosuruno
+    main: ./cmd/naniwosuruno
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+nfpms:
+  - file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    vendor: nhirsama
+    homepage: https://github.com/nhirsama/Naniwosuruno
+    maintainer: nhir <nhirsama@outlook.com>
+    description: "Naniwosuruno 一个监控当前焦点窗口并提供 http 接口的 golang 程序"
+    license: Apache
+    formats:
+      - deb
+      - rpm
+
+release:
+  github:
+    owner: nhirsama
+    name: Naniwosuruno
+  draft: true
+  prerelease: auto

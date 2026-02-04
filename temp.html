@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>糖分检测器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/pinyin@4.0.0/lib/umd/pinyin.js"></script>
+    <script src="https://unpkg.com/wanakana@5.3.1/wanakana.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .rainbow-text {
+            background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #84cc16, #22c55e, #14b8a6, #06b6d4, #3b82f6, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .progress-bar-inner {
+            transition: width 0.8s cubic-bezier(0.25, 0.1, 0.25, 1), background-color 0.8s ease;
+        }
+
+        /* -- 新增和修改的动画 -- */
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: translateX(-6px);
+            }
+            20%, 40%, 60%, 80% {
+                transform: translateX(6px);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes rainbow-glow {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .rainbow-100 {
+            background: linear-gradient(270deg, #d946ef, #8b5cf6, #3b82f6, #06b6d4, #14b8a6, #22c55e, #84cc16, #eab308, #f97316, #ef4444);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow-glow 2s linear infinite;
+        }
+
+        @keyframes initial-fade-in {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .container-fade-in {
+            animation: initial-fade-in 0.7s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+
+        /* 结果百分比的弹出动画 */
+        @keyframes pop-in {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            70% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .pop-in {
+            animation: pop-in 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+
+        /* 进度条的辉光动画 */
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 8px rgba(168, 85, 247, 0.3), 0 0 12px rgba(168, 85, 247, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 16px rgba(168, 85, 247, 0.7), 0 0 24px rgba(168, 85, 247, 0.5);
+            }
+        }
+
+        .pulsing-glow {
+            animation: pulse-glow 1.5s infinite ease-in-out;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+<!-- 新增的顶部导航容器 -->
+<div class="fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+    <!-- 历史记录折叠栏容器 -->
+    <div class="relative">
+        <button id="historyToggleBtn"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 active:scale-95 shadow-lg">
+            历史记录
+        </button>
+        <div id="historyPanel"
+             class="hidden mt-2 w-64 bg-gray-800 rounded-lg shadow-xl p-4 space-y-2 max-h-64 overflow-y-auto absolute left-0">
+            <h3 class="text-lg font-semibold text-gray-300 mb-3">历史记录</h3>
+            <ul id="historyList" class="space-y-2 text-sm text-gray-400">
+                <!-- History items will be inserted here by JS -->
+            </ul>
+            <button id="clearHistoryBtn"
+                    class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 transform hover:scale-105 active:scale-95 shadow-lg text-sm">
+                清除历史记录
+            </button>
+            <p class="text-xs text-gray-500 mt-4">我们不使用您输入的信息，结果仅供娱乐。</p>
+        </div>
+    </div>
+
+    <!-- 分享按钮容器 -->
+    <div class="relative">
+        <button id="shareButton"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 active:scale-95 shadow-lg hidden">
+            分享
+        </button>
+    </div>
+</div>
+
+<!-- 增加了 container-fade-in class 来实现进入动画 -->
+<div class="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 container-fade-in">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-3xl font-bold rainbow-text">糖分检测器</h1>
+        <p class="text-gray-400 mt-2">输入一个名字，看看他的含糖量！</p>
+        <p class="text-xs text-gray-500 mt-1">（纯属娱乐，请勿当真）</p>
+    </div>
+
+    <!-- Input Form -->
+    <div class="space-y-4">
+        <input type="text" id="nameInput" placeholder="输入任何名字或网名"
+               class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-300">
+        <!-- 增加了 active:scale-95 来实现按钮按压效果 -->
+        <button id="calculateBtn"
+                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-105 active:scale-95 shadow-lg">
+            <span id="btnText">开始计算</span>
+            <span id="btnSpinner" class="hidden animate-spin">◐</span>
+        </button>
+    </div>
+
+    <!-- Result Section -->
+    <div id="resultSection" class="hidden pt-6 space-y-4 text-center">
+        <h2 class="text-xl font-semibold text-gray-300 fade-in-up">计算结果 for "<span id="resultName"
+                                                                                       class="font-bold text-purple-400"></span>"
+        </h2>
+
+        <div class="relative w-full h-8 bg-gray-700 rounded-full overflow-hidden border-2 border-gray-600">
+            <div id="progressBar" class="progress-bar-inner h-full rounded-full" style="width: 0%;"></div>
+            <span id="percentageText"
+                  class="absolute inset-0 flex items-center justify-center text-sm font-bold text-white opacity-0">0%</span>
+        </div>
+
+        <p id="resultMessage" class="text-lg font-medium text-gray-200 h-12 flex items-center justify-center"></p>
+    </div>
+</div>
+
+<div class="fixed bottom-4 right-4 text-xs text-gray-600">
+    <a href="https://github.com/LingRhythm/tangnum" target="_blank" rel="noopener noreferrer"
+       class="hover:text-gray-500 transition-colors duration-300">
+        GitHub: LingRhythm/tangnum
+    </a>
+</div>
+
+<script>
+    window.onload = function () {
+        const nameInput = document.getElementById('nameInput');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+
+        const resultSection = document.getElementById('resultSection');
+        const resultName = document.getElementById('resultName');
+        const progressBar = document.getElementById('progressBar');
+        const percentageText = document.getElementById('percentageText');
+        const resultMessage = document.getElementById('resultMessage');
+        const shareButton = document.getElementById('shareButton'); // 新增
+        const historyToggleBtn = document.getElementById('historyToggleBtn'); // 新增
+        const historyPanel = document.getElementById('historyPanel'); // 新增
+        const historyList = document.getElementById('historyList'); // 新增
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn'); // 新增
+
+        let typingInterval; // 用于控制打字机效果的计时器
+
+        // Base64 编码和解码函数
+        // 简单的哈希函数，用于根据输入生成确定性结果消息
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        // Base64 编码和解码函数
+        function encodeBase64(str) {
+            return btoa(encodeURIComponent(str));
+        }
+
+        function decodeBase64(str) {
+            try {
+                return decodeURIComponent(atob(str));
+            } catch (e) {
+                console.error("Base64 decoding failed:", e);
+                return null;
+            }
+        }
+
+        // 保存历史记录
+        function saveHistory(name, percentage, message) {
+            let history = JSON.parse(localStorage.getItem('gayIndexHistory') || '[]');
+            history.unshift({name, percentage, message, timestamp: new Date().toLocaleString()}); // 添加到数组开头
+            if (history.length > 10) { // 只保留最新的10条记录
+                history = history.slice(0, 10);
+            }
+            localStorage.setItem('gayIndexHistory', JSON.stringify(history));
+            renderHistory(); // 更新历史记录显示
+        }
+
+        // 渲染历史记录
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('gayIndexHistory') || '[]');
+            historyList.innerHTML = ''; // 清空现有列表
+            if (history.length === 0) {
+                historyList.innerHTML = '<li class="text-gray-500">暂无历史记录</li>';
+                return;
+            }
+            history.forEach((item, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'p-2 bg-gray-700 rounded-md flex justify-between items-center cursor-pointer hover:bg-gray-600 transition duration-200';
+                listItem.innerHTML = `
+                        <div class="flex-grow min-w-0">
+                            <span class="font-semibold text-purple-300">${item.name}</span>:
+                            <span class="font-bold text-white">${item.percentage}%</span>
+                            <p class="text-xs text-gray-400 mt-1 truncate">${item.message}</p>
+                        </div>
+                        <button class="recall-history text-purple-400 hover:text-purple-300 text-sm flex-shrink-0 whitespace-nowrap ml-2 px-3 py-1 rounded-md border border-purple-400 hover:bg-purple-700 transition duration-200" data-index="${index}">查看</button>
+                    `;
+                historyList.appendChild(listItem);
+            });
+        }
+
+        // 从历史记录中加载并显示结果
+        function recallHistoryItem(index) {
+            const history = JSON.parse(localStorage.getItem('gayIndexHistory') || '[]');
+            if (history[index]) {
+                const item = history[index];
+                nameInput.value = item.name; // 填充输入框
+                displayResult(item.name, item.percentage, item.message); // 直接显示结果
+                historyPanel.classList.add('hidden'); // 折叠历史记录面板
+            }
+        }
+
+        function normalizeName(name) {
+            let processedName = name.trim().toLowerCase();
+
+            if (/[\u4e00-\u9fa5]/.test(processedName)) {
+                processedName = pinyin.pinyin(processedName, {style: pinyin.STYLE_NORMAL}).flat().join('');
+            } else if (wanakana.isJapanese(processedName)) {
+                processedName = wanakana.toRomaji(processedName);
+            }
+
+            const letters = processedName.replace(/[^a-z]/g, '');
+            const numbers = processedName.replace(/[^0-9]/g, '');
+            const specials = processedName.replace(/[^a-z0-9]/g, '');
+
+            return {letters, numbers, specials};
+        }
+
+        function getNumericValues(normalizedParts) {
+            const letterValues = normalizedParts.letters.split('').map(char => char.charCodeAt(0) - 96);
+            const numberSum = normalizedParts.numbers.split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0);
+            const specialSum = normalizedParts.specials.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return {letterValues, numberSum, specialSum};
+        }
+
+        function matrixCalculation(values, originalName) {
+            const {letterValues, numberSum, specialSum} = values;
+            if (letterValues.length === 0 && numberSum === 0 && specialSum === 0) return 0;
+
+            const letterSum = letterValues.reduce((acc, val) => acc + val, 0);
+            const totalSum = letterSum + numberSum + specialSum;
+            const magicConstant = originalName.length * 7;
+            let hash = (letterValues.length > 0) ? (letterValues[0] * (letterValues[letterValues.length - 1] || 1)) : (numberSum * 13);
+            hash += specialSum * 17;
+
+            let result = (totalSum * magicConstant + hash) % 101;
+            return result < 0 ? result + 101 : result;
+        }
+
+        function getResultMessage(percentage, name) { // 增加 name 参数
+            const messageTiers = {
+
+                0: [
+                    "0%... 常态范本：发言对点对题，毫无离题波动。",
+                    "逻辑工整、情绪稳定，你的表达像教科书示例。",
+                    "说话做事四平八稳，零离谱成分。",
+                    "信息清晰可复述，无戏剧化转折。",
+                    "没有发现任何跑题迹象，沟通成本极低。",
+                    "你的表达像等距网格：清楚、可预测、可落地。",
+                    "开会发言短平快，结论明确不绕弯。",
+                    "聊天节奏天然对拍，从不制造困惑。",
+                    "遇事按流程推进，细节不越线。",
+                    "常态满格：让人安心的标准答案。"
+                ],
+
+                10: [
+                    "整体正常，偶尔冷幽默，但绝不出圈。",
+                    "大多数场景言行合规，少量‘小跑题’可自我修正。",
+                    "能理解梗点，很少把离谱当笑点。",
+                    "回复稳健，偶发轻微拗口但不影响理解。",
+                    "社交里不抢戏，直球表达拿捏分寸。",
+                    "表达清楚，偶有枝节，也能及时收束。",
+                    "处理问题按常识路径，几乎不走怪异捷径。",
+                    "偶尔抛出反差句，但不会影响主线沟通。",
+                    "群聊里属于‘稳定输出型’。",
+                    "轻微波动，可放心把话筒交给你。"
+                ],
+
+                20: [
+                    "略显脱节，时不时给话题降温或走神。",
+                    "吐槽慢半拍，梗容易错位着陆。",
+                    "能把八卦讲成年表，但仍在常态范围。",
+                    "理解偏向字面，偶尔答非所问。",
+                    "情景化表达略吃力，需要二次解释。",
+                    "会在严肃场合说轻松话，但很快收住。",
+                    "思路偏直线，对弯路容忍度低。",
+                    "发言像说明书：信息足，趣味少。",
+                    "偶尔让人‘嗯？’一下，但不尴尬。",
+                    "轻度跑偏：提醒即可校正回主线。"
+                ],
+
+                40: [
+                    "进入‘轻度离题’区：常把结论先说完。",
+                    "能把闲聊聊成论文提纲。",
+                    "笑点自成体系，旁人需要翻译。",
+                    "会把比喻当事实，导致理解错位。",
+                    "对常识提出奇特质疑，现场气氛微凝。",
+                    "答问切换生硬，话锋转折怪异。",
+                    "喜欢自造术语，解释比内容更长。",
+                    "群聊常出现‘名场面’级三秒沉默。",
+                    "思考跳格，语义偶有漏跳。",
+                    "离谱指数抬头，请系好沟通安全带。"
+                ],
+
+                60: [
+                    "离谱显性化：推进话题喜欢‘跨栏’式跳跃。",
+                    "能把点菜上升到世界观讨论。",
+                    "严肃问题容易给出戏剧化方案。",
+                    "语义联想过快，逻辑桥梁缺几段。",
+                    "梗与事实混搭，听众需要‘校对器’。",
+                    "偏好出其不意的解决方案与结论。",
+                    "总结里常出现未讨论过的新内容。",
+                    "回复像实验报告+彩蛋结尾。",
+                    "常以一句话改变会议走向（不一定朝目标）。",
+                    "中度离谱：沟通效率开始受影响。"
+                ],
+
+                75: [
+                    "高能预警：发言频繁脱线但极具记忆点。",
+                    "常规问题给出非常规叙事。",
+                    "能把天气问候聊成形而上学。",
+                    "语境切换过快，听众跟不上。",
+                    "段子与结论难区分，笑点与观点混用。",
+                    "现场需要‘同传’同学复述要义。",
+                    "经常制造群聊名场面与表情包素材。",
+                    "行动与表述错位，执行常靠猜。",
+                    "沟通成本显著上升，复盘难度变大。",
+                    "重度离谱：请预留缓冲区与澄清环节。"
+                ],
+
+                90: [
+                    "临近爆表：语言像高频噪点，需强力滤波。",
+                    "问题未述完，答案已绕地一圈。",
+                    "对现实设定进行私人改写，语义规则自定义。",
+                    "叙事结构解体，时间线自由流动。",
+                    "常识锚点松动，需要持续校准。",
+                    "一句话可引发集体疑惑与应急澄清。",
+                    "会议纪要难以复刻你的思路。",
+                    "对话像迷宫漫游：出口未知。",
+                    "超重度离谱：沟通需专人陪护与图解。",
+                    "离谱光环肉眼可见，慎重交付关键话题。"
+                ],
+
+                100: [
+                    "满格！你是‘离谱现象学’的行走样本。",
+                    "任何话题都能被你带进奇点。",
+                    "发言脱离常轨，像在另一个维度开新分支。",
+                    "常识对你更像装饰品，用或不用随心。",
+                    "逻辑如现代艺术：作者懂就算懂。",
+                    "你一开口，全场暂停，等待地面指挥。",
+                    "沟通已不可线性记录，必须图解与范式转换。",
+                    "你是群聊的奇点与涡流中心。",
+                    "离谱指数封顶：常人范式失效。",
+                    "结论：离谱本体，且稳定辐射。"
+                ]
+
+            };
+
+            if (percentage === 250) return "你撑起了整个贴吧群的糖分，舔一口足够让一个低血糖患者在太平洋游20个来回";
+            let selectedTier;
+            if (percentage === 0) selectedTier = messageTiers[0];
+            else if (percentage <= 10) selectedTier = messageTiers[10];
+            else if (percentage <= 20) selectedTier = messageTiers[20];
+            else if (percentage <= 40) selectedTier = messageTiers[40];
+            else if (percentage <= 60) selectedTier = messageTiers[60];
+            else if (percentage <= 75) selectedTier = messageTiers[75];
+            else if (percentage <= 90) selectedTier = messageTiers[90];
+            else selectedTier = messageTiers[100];
+
+            const messageIndex = Math.floor(Math.random() * selectedTier.length);
+
+            return selectedTier[messageIndex];
+        }
+
+        function getProgressBarColor(percentage) {
+            const colors = [{p: 0, color: '#3b82f6'}, {p: 25, color: '#22c55e'}, {p: 50, color: '#eab308'}, {
+                p: 75,
+                color: '#f97316'
+            }, {p: 100, color: '#d946ef'}];
+            for (let i = 1; i < colors.length; i++) {
+                if (percentage <= colors[i].p) {
+                    const p1 = colors[i - 1].p, p2 = colors[i].p, c1 = colors[i - 1].color, c2 = colors[i].color;
+                    const factor = (p2 - p1 === 0) ? 1 : (percentage - p1) / (p2 - p1);
+                    const r1 = parseInt(c1.substring(1, 3), 16), g1 = parseInt(c1.substring(3, 5), 16),
+                        b1 = parseInt(c1.substring(5, 7), 16);
+                    const r2 = parseInt(c2.substring(1, 3), 16), g2 = parseInt(c2.substring(3, 5), 16),
+                        b2 = parseInt(c2.substring(5, 7), 16);
+                    const r = Math.round(r1 + factor * (r2 - r1)), g = Math.round(g1 + factor * (g2 - g1)),
+                        b = Math.round(b1 + factor * (b2 - b1));
+                    return `rgb(${r},${g},${b})`;
+                }
+            }
+            return colors[colors.length - 1].color;
+        }
+
+        function typeResultMessage(message) {
+            clearInterval(typingInterval);
+            resultMessage.textContent = '';
+            let i = 0;
+            typingInterval = setInterval(() => {
+                if (i < message.length) {
+                    resultMessage.textContent += message.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(typingInterval);
+                }
+            }, 50); // 每个字 50 毫秒
+        }
+
+        function displayResult(name, percentage, message = null) {
+            if (name === "ljh" || name === "mmc" || name === "椎白") percentage = 250;
+            resultName.textContent = name;
+            resultSection.classList.remove('hidden');
+            shareButton.classList.remove('hidden'); // 显示分享按钮
+
+            // 重置样式
+            percentageText.style.opacity = 0;
+            resultMessage.textContent = '';
+            percentageText.classList.remove('pop-in', 'rainbow-100');
+            progressBar.classList.remove('pulsing-glow');
+
+            setTimeout(() => progressBar.classList.add('pulsing-glow'), 100);
+
+            let currentPercent = -1;
+            const interval = setInterval(() => {
+                currentPercent++;
+                if (currentPercent >= percentage) {
+                    clearInterval(interval);
+                    currentPercent = percentage;
+
+                    percentageText.textContent = `${currentPercent}%`;
+                    percentageText.style.opacity = 1;
+                    percentageText.classList.add('pop-in'); // 应用弹出动画
+
+                    // 如果 message 为 null，则实时生成
+                    const finalMessage = message || getResultMessage(percentage, name); // 传入 name
+                    typeResultMessage(finalMessage); // 调用打字机效果
+
+                    if (currentPercent === 100) {
+                        percentageText.classList.add('rainbow-100');
+                    }
+
+                    setTimeout(() => progressBar.classList.remove('pulsing-glow'), 500);
+
+                    // 保存历史记录
+                    saveHistory(name, percentage, finalMessage);
+                }
+                progressBar.style.width = `${currentPercent}%`;
+                progressBar.style.backgroundColor = getProgressBarColor(currentPercent);
+                if (currentPercent !== -1) {
+                    percentageText.textContent = `${currentPercent}%`;
+                    percentageText.style.opacity = 1;
+                }
+            }, 20);
+        }
+
+        async function handleShare() {
+            const name = resultName.textContent;
+            // const percentage = parseInt(percentageText.textContent); // 不再需要
+            // const message = resultMessage.textContent; // 不再需要
+
+            if (!name) { // 只检查名字
+                alert('请先计算一个结果再分享！');
+                return;
+            }
+
+            const dataToEncode = `name=${encodeURIComponent(name)}`; // 只编码名字
+            const encodedData = encodeBase64(dataToEncode);
+            const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                alert('分享链接已复制到剪贴板：' + shareUrl);
+            } catch (error) {
+                alert('复制链接失败，请手动复制。');
+                console.error('Copy to clipboard failed:', error);
+            }
+        }
+
+        function handleCalculation() {
+            const originalName = nameInput.value;
+            const trimmedName = originalName.trim(); // 去除名字前后的空格
+            if (!trimmedName) { // 使用去除空格后的名字进行检查
+                nameInput.classList.add('shake');
+                setTimeout(() => nameInput.classList.remove('shake'), 500);
+                return;
+            }
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            calculateBtn.disabled = true;
+            resultSection.classList.add('hidden');
+            shareButton.classList.add('hidden'); // 隐藏分享按钮
+
+            clearInterval(typingInterval); // 如果上次的打字机还在运行，则清除
+
+            setTimeout(() => {
+                const normalizedParts = normalizeName(trimmedName); // 使用去除空格后的名字进行计算
+                const numericValues = getNumericValues(normalizedParts);
+                const finalPercentage = matrixCalculation(numericValues, trimmedName); // 使用去除空格后的名字进行计算
+                // displayResult 现在会根据 name 和 percentage 实时生成 message
+                displayResult(trimmedName, finalPercentage); // 传递去除空格后的名字
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                calculateBtn.disabled = false;
+            }, 800);
+        }
+
+        // 检查URL参数并显示结果
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedData = urlParams.get('data');
+            if (encodedData) {
+                const decodedData = decodeBase64(encodedData);
+                if (decodedData) {
+                    const params = new URLSearchParams(decodedData);
+                    const name = params.get('name');
+                    // const percentage = parseInt(params.get('percentage')); // 不再需要
+                    // const message = params.get('message'); // 不再需要
+
+                    if (name) { // 只检查名字
+                        nameInput.value = name; // 填充输入框
+                        handleCalculation(); // 触发计算流程
+                    }
+                }
+            }
+        }
+
+        calculateBtn.addEventListener('click', handleCalculation);
+        nameInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                handleCalculation();
+            }
+        });
+
+        shareButton.addEventListener('click', handleShare); // 分享按钮事件监听
+
+        historyToggleBtn.addEventListener('click', () => { // 历史记录折叠按钮事件监听
+            historyPanel.classList.toggle('hidden');
+        });
+
+        historyList.addEventListener('click', (event) => { // 历史记录列表点击事件委托
+            if (event.target.classList.contains('recall-history')) {
+                const index = event.target.dataset.index;
+                recallHistoryItem(index);
+            }
+        });
+
+        clearHistoryBtn.addEventListener('click', () => { // 清除历史记录按钮事件监听
+            if (confirm('确定要清除所有历史记录吗？')) {
+                localStorage.removeItem('gayIndexHistory');
+                renderHistory(); // 更新历史记录显示
+            }
+        });
+
+        // 页面加载时执行
+        renderHistory(); // 渲染历史记录
+        checkUrlParams(); // 检查URL参数
+    };
+</script>
+</body>
+</html>
