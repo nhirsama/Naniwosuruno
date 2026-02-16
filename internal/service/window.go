@@ -60,6 +60,25 @@ func (s *WindowService) ReportWindow(ctx context.Context, req *connect.Request[n
 	return connect.NewResponse(&naniwosurunov1.ReportWindowResponse{}), nil
 }
 
+func (s *WindowService) Heartbeat(ctx context.Context, req *connect.Request[naniwosurunov1.HeartbeatRequest]) (*connect.Response[naniwosurunov1.HeartbeatResponse], error) {
+	token := req.Header().Get("Authorization")
+	if strings.HasPrefix(token, "Bearer ") {
+		token = strings.TrimPrefix(token, "Bearer ")
+	}
+	if token == "" {
+		token = req.Header().Get("token")
+	}
+
+	_, ok := s.authenticator.ValidateSession(token)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired token"))
+	}
+
+	return connect.NewResponse(&naniwosurunov1.HeartbeatResponse{
+		Count: req.Msg.Count,
+	}), nil
+}
+
 func (s *WindowService) SubscribeEvents(ctx context.Context, req *connect.Request[naniwosurunov1.SubscribeEventsRequest], stream *connect.ServerStream[naniwosurunov1.WindowEvent]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("RPC streaming not yet implemented"))
 }

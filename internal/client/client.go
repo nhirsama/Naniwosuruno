@@ -35,6 +35,7 @@ type Client struct {
 	config          *pkg.AppConfig
 	connection      *ServerConnection
 	lastWindowTitle string
+	heartbeatCount  uint32
 }
 
 func Run() {
@@ -61,11 +62,27 @@ func (c *Client) Start() {
 
 	c.connection.Connect()
 
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	windowTicker := time.NewTicker(5 * time.Second)
+	heartbeatTicker := time.NewTicker(120 * time.Second)
+	defer windowTicker.Stop()
+	defer heartbeatTicker.Stop()
 
-	for range ticker.C {
-		c.checkAndUpdateWindowTitle()
+	// 启动时先发送一次心跳
+	c.heartbeatCount++
+	if err := c.connection.SendHeartbeat(c.heartbeatCount); err != nil {
+		log.Printf("发送心跳失败: %v", err)
+	}
+
+	for {
+		select {
+		case <-windowTicker.C:
+			c.checkAndUpdateWindowTitle()
+		case <-heartbeatTicker.C:
+			c.heartbeatCount++
+			if err := c.connection.SendHeartbeat(c.heartbeatCount); err != nil {
+				log.Printf("发送心跳失败: %v", err)
+			}
+		}
 	}
 }
 

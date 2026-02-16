@@ -16,6 +16,8 @@ service AuthService {
 service WindowService {
   // 客户端上报当前窗口状态
   rpc ReportWindow(ReportWindowRequest) returns (ReportWindowResponse);
+  // 心跳包
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   // 前端订阅实时窗口事件流
   rpc SubscribeEvents(SubscribeEventsRequest) returns (stream WindowEvent);
 }
@@ -49,6 +51,14 @@ message ReportWindowRequest {
 
 message ReportWindowResponse {
   // 空响应通常可以留空，或者返回简单的确认
+}
+
+message HeartbeatRequest {
+  uint32 count = 1;
+}
+
+message HeartbeatResponse {
+  uint32 count = 1;
 }
 
 message SubscribeEventsRequest {

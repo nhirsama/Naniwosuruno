@@ -44,6 +44,8 @@ const (
 	// WindowServiceReportWindowProcedure is the fully-qualified name of the WindowService's
 	// ReportWindow RPC.
 	WindowServiceReportWindowProcedure = "/naniwosuruno.v1.WindowService/ReportWindow"
+	// WindowServiceHeartbeatProcedure is the fully-qualified name of the WindowService's Heartbeat RPC.
+	WindowServiceHeartbeatProcedure = "/naniwosuruno.v1.WindowService/Heartbeat"
 	// WindowServiceSubscribeEventsProcedure is the fully-qualified name of the WindowService's
 	// SubscribeEvents RPC.
 	WindowServiceSubscribeEventsProcedure = "/naniwosuruno.v1.WindowService/SubscribeEvents"
@@ -153,6 +155,8 @@ func (UnimplementedAuthServiceHandler) VerifyChallenge(context.Context, *connect
 type WindowServiceClient interface {
 	// 客户端上报当前窗口状态
 	ReportWindow(context.Context, *connect.Request[v1.ReportWindowRequest]) (*connect.Response[v1.ReportWindowResponse], error)
+	// 心跳包
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
 	// 前端订阅实时窗口事件流
 	SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest]) (*connect.ServerStreamForClient[v1.WindowEvent], error)
 }
@@ -174,6 +178,12 @@ func NewWindowServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(windowServiceMethods.ByName("ReportWindow")),
 			connect.WithClientOptions(opts...),
 		),
+		heartbeat: connect.NewClient[v1.HeartbeatRequest, v1.HeartbeatResponse](
+			httpClient,
+			baseURL+WindowServiceHeartbeatProcedure,
+			connect.WithSchema(windowServiceMethods.ByName("Heartbeat")),
+			connect.WithClientOptions(opts...),
+		),
 		subscribeEvents: connect.NewClient[v1.SubscribeEventsRequest, v1.WindowEvent](
 			httpClient,
 			baseURL+WindowServiceSubscribeEventsProcedure,
@@ -186,12 +196,18 @@ func NewWindowServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // windowServiceClient implements WindowServiceClient.
 type windowServiceClient struct {
 	reportWindow    *connect.Client[v1.ReportWindowRequest, v1.ReportWindowResponse]
+	heartbeat       *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
 	subscribeEvents *connect.Client[v1.SubscribeEventsRequest, v1.WindowEvent]
 }
 
 // ReportWindow calls naniwosuruno.v1.WindowService.ReportWindow.
 func (c *windowServiceClient) ReportWindow(ctx context.Context, req *connect.Request[v1.ReportWindowRequest]) (*connect.Response[v1.ReportWindowResponse], error) {
 	return c.reportWindow.CallUnary(ctx, req)
+}
+
+// Heartbeat calls naniwosuruno.v1.WindowService.Heartbeat.
+func (c *windowServiceClient) Heartbeat(ctx context.Context, req *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return c.heartbeat.CallUnary(ctx, req)
 }
 
 // SubscribeEvents calls naniwosuruno.v1.WindowService.SubscribeEvents.
@@ -203,6 +219,8 @@ func (c *windowServiceClient) SubscribeEvents(ctx context.Context, req *connect.
 type WindowServiceHandler interface {
 	// 客户端上报当前窗口状态
 	ReportWindow(context.Context, *connect.Request[v1.ReportWindowRequest]) (*connect.Response[v1.ReportWindowResponse], error)
+	// 心跳包
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
 	// 前端订阅实时窗口事件流
 	SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest], *connect.ServerStream[v1.WindowEvent]) error
 }
@@ -220,6 +238,12 @@ func NewWindowServiceHandler(svc WindowServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(windowServiceMethods.ByName("ReportWindow")),
 		connect.WithHandlerOptions(opts...),
 	)
+	windowServiceHeartbeatHandler := connect.NewUnaryHandler(
+		WindowServiceHeartbeatProcedure,
+		svc.Heartbeat,
+		connect.WithSchema(windowServiceMethods.ByName("Heartbeat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	windowServiceSubscribeEventsHandler := connect.NewServerStreamHandler(
 		WindowServiceSubscribeEventsProcedure,
 		svc.SubscribeEvents,
@@ -230,6 +254,8 @@ func NewWindowServiceHandler(svc WindowServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case WindowServiceReportWindowProcedure:
 			windowServiceReportWindowHandler.ServeHTTP(w, r)
+		case WindowServiceHeartbeatProcedure:
+			windowServiceHeartbeatHandler.ServeHTTP(w, r)
 		case WindowServiceSubscribeEventsProcedure:
 			windowServiceSubscribeEventsHandler.ServeHTTP(w, r)
 		default:
@@ -243,6 +269,10 @@ type UnimplementedWindowServiceHandler struct{}
 
 func (UnimplementedWindowServiceHandler) ReportWindow(context.Context, *connect.Request[v1.ReportWindowRequest]) (*connect.Response[v1.ReportWindowResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("naniwosuruno.v1.WindowService.ReportWindow is not implemented"))
+}
+
+func (UnimplementedWindowServiceHandler) Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("naniwosuruno.v1.WindowService.Heartbeat is not implemented"))
 }
 
 func (UnimplementedWindowServiceHandler) SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest], *connect.ServerStream[v1.WindowEvent]) error {

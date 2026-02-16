@@ -129,6 +129,30 @@ func (s *ServerConnection) SendUpdate(payload *UpdatePayload) error {
 	return s.sendUpdateV1(payload)
 }
 
+func (s *ServerConnection) SendHeartbeat(count uint32) error {
+	if !s.useV1 {
+		return nil
+	}
+
+	ctx := context.Background()
+	req := connect.NewRequest(&naniwosurunov1.HeartbeatRequest{
+		Count: count,
+	})
+	req.Header().Set("Authorization", "Bearer "+s.token)
+
+	_, err := s.windowClient.Heartbeat(ctx, req)
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeUnauthenticated {
+			if reAuthErr := s.authenticateV1(); reAuthErr != nil {
+				return fmt.Errorf("heartbeat re-auth failed: %w", reAuthErr)
+			}
+			req.Header().Set("Authorization", "Bearer "+s.token)
+			_, err = s.windowClient.Heartbeat(ctx, req)
+		}
+	}
+	return err
+}
+
 func (s *ServerConnection) sendUpdateV1(payload *UpdatePayload) error {
 	ctx := context.Background()
 	req := connect.NewRequest(&naniwosurunov1.ReportWindowRequest{
