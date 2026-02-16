@@ -21,6 +21,7 @@ type ClientState struct {
 	IsOnline      bool
 	Name          string
 	OS            string
+	LastTitle     string
 }
 
 type WindowService struct {
@@ -45,37 +46,33 @@ func (s *WindowService) startTimeoutChecker() {
 	for range ticker.C {
 		s.mu.Lock()
 		now := time.Now()
-		for id, state := range s.clients {
+		for _, state := range s.clients {
 			if state.IsOnline && now.Sub(state.LastHeartbeat) > 360*time.Second {
 				state.IsOnline = false
-				log.Printf("Client %s (%s) offline (timeout)", state.Name, id)
-				s.publishStatusEvent(state.Name, state.OS, "offline")
+				log.Printf("Client %s offline (timeout)", state.Name)
+				s.publishEvent(state, "offline")
 			}
 		}
 		s.mu.Unlock()
 	}
 }
 
-func (s *WindowService) publishStatusEvent(clientName, os, status string) {
-	event := &naniwosurunov1.WindowEvent{
-		Client: clientName,
-		Os:     os,
-		Status: status,
-	}
-	payload, err := json.Marshal(event)
-	if err == nil {
-		s.sseServer.TryPublish("focus", &sse.Event{Data: payload})
-	}
+// publishEvent 核心修复：手动构造 Map 确保 JSON 字段完整，防止前端解析 title.trim() 报错
+func (s *WindowService) publishEvent(state *ClientState, status string) {
+	payload, _ := json.Marshal(map[string]interface{}{
+		"title":  state.LastTitle,
+		"os":     state.OS,
+		"client": state.Name,
+		"status": status,
+	})
+	s.sseServer.TryPublish("focus", &sse.Event{Data: payload})
 }
 
 func (s *WindowService) ReportWindow(ctx context.Context, req *connect.Request[naniwosurunov1.ReportWindowRequest]) (*connect.Response[naniwosurunov1.ReportWindowResponse], error) {
-	// 1. Token Validation (from Header)
 	token := req.Header().Get("Authorization")
-	// Handle "Bearer <token>"
 	if strings.HasPrefix(token, "Bearer ") {
 		token = strings.TrimPrefix(token, "Bearer ")
 	}
-	// Fallback
 	if token == "" {
 		token = req.Header().Get("token")
 	}
@@ -85,7 +82,6 @@ func (s *WindowService) ReportWindow(ctx context.Context, req *connect.Request[n
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired token"))
 	}
 
-	// Update client state
 	s.mu.Lock()
 	state, exists := s.clients[session.ClientID]
 	if !exists {
@@ -94,28 +90,12 @@ func (s *WindowService) ReportWindow(ctx context.Context, req *connect.Request[n
 	}
 	state.LastHeartbeat = time.Now()
 	state.OS = req.Msg.Os
-	if !state.IsOnline {
-		state.IsOnline = true
-		log.Printf("Client %s (%s) online via ReportWindow", session.Name, session.ClientID)
-		s.publishStatusEvent(session.Name, state.OS, "online")
-	}
+	state.LastTitle = req.Msg.Title
+	state.IsOnline = true
 	s.mu.Unlock()
 
-	// 2. Publish to SSE (Legacy support for Web Frontend)
-	// Use generated Proto struct for type-safe serialization
-	event := &naniwosurunov1.WindowEvent{
-		Title:  req.Msg.Title,
-		Os:     req.Msg.Os,
-		Client: session.Name,
-		Status: "update",
-	}
-
-	payload, err := json.Marshal(event)
-	if err != nil {
-		log.Printf("Failed to marshal SSE payload: %v", err)
-	} else {
-		s.sseServer.TryPublish("focus", &sse.Event{Data: payload})
-	}
+	// 统一作为 online 状态发布，确保 title 字段原样发送
+	s.publishEvent(state, "online")
 
 	return connect.NewResponse(&naniwosurunov1.ReportWindowResponse{}), nil
 }
@@ -141,26 +121,22 @@ func (s *WindowService) Heartbeat(ctx context.Context, req *connect.Request[nani
 		s.clients[session.ClientID] = state
 	}
 
-	// 序列号检查
 	if req.Msg.Count <= state.LastCount && state.LastCount != 0 {
 		s.mu.Unlock()
-		return connect.NewResponse(&naniwosurunov1.HeartbeatResponse{
-			Count: state.LastCount,
-		}), nil
+		return connect.NewResponse(&naniwosurunov1.HeartbeatResponse{Count: state.LastCount}), nil
 	}
 
 	state.LastCount = req.Msg.Count
 	state.LastHeartbeat = time.Now()
+
 	if !state.IsOnline {
 		state.IsOnline = true
-		log.Printf("Client %s (%s) online via Heartbeat", session.Name, session.ClientID)
-		s.publishStatusEvent(session.Name, state.OS, "online")
+		log.Printf("Client %s online via Heartbeat", session.Name)
+		s.publishEvent(state, "online")
 	}
 	s.mu.Unlock()
 
-	return connect.NewResponse(&naniwosurunov1.HeartbeatResponse{
-		Count: req.Msg.Count,
-	}), nil
+	return connect.NewResponse(&naniwosurunov1.HeartbeatResponse{Count: req.Msg.Count}), nil
 }
 
 func (s *WindowService) SubscribeEvents(ctx context.Context, req *connect.Request[naniwosurunov1.SubscribeEventsRequest], stream *connect.ServerStream[naniwosurunov1.WindowEvent]) error {
