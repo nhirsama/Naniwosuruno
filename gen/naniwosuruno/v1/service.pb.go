@@ -438,6 +438,7 @@ type WindowEvent struct {
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
 	Os            string                 `protobuf:"bytes,2,opt,name=os,proto3" json:"os,omitempty"`
 	Client        string                 `protobuf:"bytes,3,opt,name=client,proto3" json:"client,omitempty"`
+	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"` // "online", "offline", "update"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -493,6 +494,13 @@ func (x *WindowEvent) GetClient() string {
 	return ""
 }
 
+func (x *WindowEvent) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 var File_naniwosuruno_v1_service_proto protoreflect.FileDescriptor
 
 const file_naniwosuruno_v1_service_proto_rawDesc = "" +
@@ -518,11 +526,12 @@ const file_naniwosuruno_v1_service_proto_rawDesc = "" +
 	"\x11HeartbeatResponse\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\rR\x05count\"5\n" +
 	"\x16SubscribeEventsRequest\x12\x1b\n" +
-	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"K\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"c\n" +
 	"\vWindowEvent\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x0e\n" +
 	"\x02os\x18\x02 \x01(\tR\x02os\x12\x16\n" +
-	"\x06client\x18\x03 \x01(\tR\x06client2\xd9\x01\n" +
+	"\x06client\x18\x03 \x01(\tR\x06client\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status2\xd9\x01\n" +
 	"\vAuthService\x12d\n" +
 	"\x0fCreateChallenge\x12'.naniwosuruno.v1.CreateChallengeRequest\x1a(.naniwosuruno.v1.CreateChallengeResponse\x12d\n" +
 	"\x0fVerifyChallenge\x12'.naniwosuruno.v1.VerifyChallengeRequest\x1a(.naniwosuruno.v1.VerifyChallengeResponse2\x9c\x02\n" +

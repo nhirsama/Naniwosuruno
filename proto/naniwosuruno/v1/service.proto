@@ -69,4 +69,5 @@ message WindowEvent {
   string title = 1;
   string os = 2;
   string client = 3;
+  string status = 4; // "online", "offline", "update"
 }
